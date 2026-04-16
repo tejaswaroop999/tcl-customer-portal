@@ -1,36 +1,122 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TCL Customer Portal Migration (Phase 1)
 
-## Getting Started
+Next.js + Tailwind + Supabase implementation for the TCL Full-Stack Developer hiring test.
 
-First, run the development server:
+## Tech Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Next.js (App Router)
+- Tailwind CSS
+- Supabase (Auth, Postgres, RLS, Storage)
+- Mock Shopify sync integration: `POST /api/sync-products`
+
+## Local Setup
+
+1. Install dependencies:
+   - `npm install`
+2. Create env file:
+   - copy `.env.example` to `.env.local`
+3. Add these values in `.env.local`:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+4. In Supabase SQL Editor, run:
+   - `supabase/migrations/001_customer_schema.sql` (run once on a fresh schema)
+   - `supabase/migrations/002_seed_customer_data.sql`
+5. Create Supabase Storage bucket:
+   - `design-files`
+6. Start app:
+   - `npm run dev`
+7. Open:
+   - `http://localhost:3000`
+
+## Required Env Variables
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-or-publishable-key
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Task Coverage
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Task 1 - Schema Analysis and Supabase Migration
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- SQL migration: `supabase/migrations/001_customer_schema.sql`
+  - Includes enums, tables, foreign keys, indexes, triggers
+- Seed file: `supabase/migrations/002_seed_customer_data.sql`
+  - Includes sample users, products, orders, proofs, and revision requests
+- RLS implemented for customer-scoped access on:
+  - `users`
+  - `orders`
+  - `proofs`
+  - `revision_requests`
 
-## Learn More
+### Task 2 - Authentication and Role-Based Access
 
-To learn more about Next.js, take a look at the following resources:
+- Supabase email/password sign-up and login implemented
+- On sign-up, `public.users` row is inserted via trigger `handle_new_auth_user()`
+- Protected routes:
+  - `/dashboard`
+  - `/orders/*`
+- Route protection and auth session refresh are handled in middleware
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Task 3 - Customer Dashboard and Order Creation UI
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Dashboard (`/dashboard`) shows:
+  - authenticated customer name and organization
+  - customer-specific orders with status badges
+  - prominent `Create New Order` CTA
+- Create order (`/orders/new`) provides 3-step flow:
+  - Step 1: event info, order type, product selection, product color choices
+  - Step 2: design descriptions, design-direction choice, file upload to Supabase Storage
+  - Step 3: print type selection and submit
+- Order submit inserts order with `status = 'new'` and redirects to dashboard
 
-## Deploy on Vercel
+### Task 4 - Proof Review and Approval Workflow
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Proof review page: `/orders/[id]/proofs`
+- Proof cards include:
+  - proof number, product, color, print type, estimated ship date, price tiers, status, mockup image
+- Actions:
+  - Approve proof
+  - Request revision (creates `revision_requests` row and updates proof status)
+- Order status is auto-updated by trigger when all proofs are approved
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Task 5 - Integration
+
+- Mock Shopify sync endpoint:
+  - `POST /api/sync-products`
+- Upserts product records into `products` table
+
+## Schema Design Decisions
+
+- Bubble option sets were mapped to Postgres enums:
+  - `user_type`, `order_status`, `print_type`, `proof_status`
+- `products_selected` is stored as `text[]` for phase-1 migration speed and Bubble parity.
+- `price_tiers` is stored as `jsonb` to support variable tier structures.
+- `public.users` is linked to `auth.users` through a trigger-based profile creation flow.
+
+## RLS Validation Notes
+
+Customer RLS policies ensure a logged-in customer can only access their own records.
+
+Quick check in Supabase SQL Editor (authenticated context):
+
+```sql
+select * from public.orders;
+```
+
+Expected behavior: only the current authenticated customer's orders are returned.
+
+## Demo
+
+- Demo video (3-5 min): `<add Loom URL here>`
+- Optional live deployment: `<add Vercel/Railway URL here>`
+
+## Test Credentials (for reviewers)
+
+- Email: `test@tcl-demo.com`
+- Password: `<set and add password>`
+
+## Notes
+
+- If Supabase email confirmation is enabled, login may fail with `Email not confirmed`.
+- For local demo, disable email confirmation in Supabase Auth settings or confirm the user manually.
