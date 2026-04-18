@@ -54,11 +54,10 @@ export function OrderForm({
               key={value}
               type="button"
               onClick={() => setStep(value as StepKey)}
-              className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
-                step === value
+              className={`rounded-lg px-3 py-1.5 text-sm font-medium ${step === value
                   ? "bg-indigo-600 text-white shadow-sm"
                   : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"
-              }`}
+                }`}
             >
               {value}
             </button>

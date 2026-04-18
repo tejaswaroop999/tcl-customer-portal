@@ -108,8 +108,8 @@ Expected behavior: only the current authenticated customer's orders are returned
 
 ## Demo
 
-- Demo video (3-5 min): `<add Loom URL here>`
-- Optional live deployment: `<add Vercel/Railway URL here>`
+- Demo video (3-5 min): `https://www.loom.com/share/9fa62b1fbef342028476df56bb471d01`
+
 
 ## Test Credentials (for reviewers)
 
